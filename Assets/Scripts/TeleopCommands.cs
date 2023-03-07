@@ -50,6 +50,7 @@ public class TeleopCommands : MonoBehaviour
                 .AddMember(new StructMember("t2", typeFactory.GetPrimitiveType<bool>()))
                 .AddMember(new StructMember("t3", typeFactory.GetPrimitiveType<bool>()))
                 .AddMember(new StructMember("t4", typeFactory.GetPrimitiveType<bool>()))
+                .AddMember(new StructMember("isVR", typeFactory.GetPrimitiveType<bool>()))
                 .Create();
 
             Writer = DDSHandler.SetupDataWriter("DirectTeleopTopic", Teleop);
@@ -68,6 +69,14 @@ public class TeleopCommands : MonoBehaviour
         sample.SetValue("t2", t2.ispressed);
         sample.SetValue("t3", t3.ispressed);
         sample.SetValue("t4", t4.ispressed);
+        if (VR.isOn)
+        {
+            sample.SetValue("isVR", true);
+        }
+        else
+        {
+            sample.SetValue("isVR", false);
+        }
         Writer.Write(sample);
     }
 }
