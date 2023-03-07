@@ -17,6 +17,7 @@ namespace DDS_protocol
         public float Iky;
         public float Ikz;
         public double XValue;
+        public int ColorModee;
         public GameObject warningMessage;
         public GameObject warning2Message;
         public int collisionNumbers;
@@ -69,18 +70,21 @@ namespace DDS_protocol
 
                     if (data.GetValue<int>("color") == 2)
                     {
+                        ColorModee = 2;
                         warningMessage.SetActive(true);
                         warning2Message.SetActive(false);
                     }
                     else if (data.GetValue<int>("color") == 3)
                     {
+                        ColorModee = 3;
                         warning2Message.SetActive(true);
                         warningMessage.SetActive(false);
                     }
                     else
-                    { 
+                    {
+                        ColorModee = 1;
                         warningMessage.SetActive(false);
-                        warning2Message.SetActive(true);
+                        warning2Message.SetActive(false);
                     }
                 }
             }
