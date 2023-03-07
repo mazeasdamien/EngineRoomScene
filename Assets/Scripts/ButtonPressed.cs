@@ -1,3 +1,4 @@
+using DDS_protocol;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -6,6 +7,8 @@ using UnityEngine.EventSystems;
 public class ButtonPressed : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
 {
     private bool isHolding = false;
+    public MoveRobot_Sub MoveRobot_Sub;
+    public OutOfRqngeHelper OutOfRqngeHelper_Sub;
     public bool ispressed;
 
     public void OnPointerDown(PointerEventData eventData)
@@ -22,6 +25,11 @@ public class ButtonPressed : MonoBehaviour, IPointerDownHandler, IPointerUpHandl
 
     void Update()
     {
+        if(MoveRobot_Sub.ColorModee == 3 && gameObject.name != OutOfRqngeHelper_Sub.opposite_pressed.name)
+        {
+            isHolding = false;
+        }
+
         if (isHolding)
         {
             ispressed = true;
