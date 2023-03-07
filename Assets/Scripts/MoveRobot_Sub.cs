@@ -17,6 +17,9 @@ namespace DDS_protocol
         public float Iky;
         public float Ikz;
         public double XValue;
+        public GameObject warningMessage;
+        public GameObject warning2Message;
+        public int collisionNumbers;
         private protected DataReader<DynamicData> Reader { get; private set; }
         private bool init = false;
 
@@ -36,6 +39,8 @@ namespace DDS_protocol
                    .AddMember(new StructMember("ikx", typeFactory.GetPrimitiveType<float>()))
                    .AddMember(new StructMember("iky", typeFactory.GetPrimitiveType<float>()))
                    .AddMember(new StructMember("ikz", typeFactory.GetPrimitiveType<float>()))
+                   .AddMember(new StructMember("color", typeFactory.GetPrimitiveType<int>()))
+                   .AddMember(new StructMember("collisionNumbers", typeFactory.GetPrimitiveType<int>()))
                    .Create();
 
                 Reader = DDSHandler.SetupDataReader("robotTrackTopic", robotTrackTopic);
@@ -60,6 +65,23 @@ namespace DDS_protocol
                     Ikx = data.GetValue<float>("ikx");
                     Iky = data.GetValue<float>("iky");
                     Ikz = data.GetValue<float>("ikz");
+                    collisionNumbers = data.GetValue<int>("collisionNumbers");
+
+                    if (data.GetValue<int>("color") == 2)
+                    {
+                        warningMessage.SetActive(true);
+                        warning2Message.SetActive(false);
+                    }
+                    else if (data.GetValue<int>("color") == 3)
+                    {
+                        warning2Message.SetActive(true);
+                        warningMessage.SetActive(false);
+                    }
+                    else
+                    { 
+                        warningMessage.SetActive(false);
+                        warning2Message.SetActive(true);
+                    }
                 }
             }
         }
