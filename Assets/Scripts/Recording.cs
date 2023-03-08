@@ -44,14 +44,8 @@ namespace DDS_protocol
                 folderPath = $"{Application.dataPath}/Participants_data/participant_{id.text}";
                 Directory.CreateDirectory(folderPath);
 
-                if (VR)
-                {
-                    filePath = $"{folderPath}/log_VR.txt";
-                }
-                else if (MONITOR)
-                {
+
                     filePath = $"{folderPath}/log_MONITOR.txt";
-                }
 
                 if (!File.Exists(filePath))
                 {
