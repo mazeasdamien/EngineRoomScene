@@ -113,16 +113,16 @@ namespace DDS_protocol
             {
                 writer.WriteLine(
                     Math.Round(time, 2)
-                    + "," + Math.Round(moveRobot_Sub.XValue, 2)
-                    + "," + Math.Round(moveRobot_Sub.Ikx, 2)
-                    + "," + Math.Round(moveRobot_Sub.Iky, 2)
-                    + "," + Math.Round(moveRobot_Sub.Ikz, 2)
-                    + "," + Math.Round(RobotHandler.UrOutputs.actual_q[0] * Mathf.Rad2Deg, 2)
-                    + "," + Math.Round(RobotHandler.UrOutputs.actual_q[1] * Mathf.Rad2Deg, 2)
-                    + "," + Math.Round(RobotHandler.UrOutputs.actual_q[2] * Mathf.Rad2Deg, 2)
-                    + "," + Math.Round(RobotHandler.UrOutputs.actual_q[3] * Mathf.Rad2Deg, 2)
-                    + "," + Math.Round(RobotHandler.UrOutputs.actual_q[4] * Mathf.Rad2Deg, 2)
-                    + "," + Math.Round(RobotHandler.UrOutputs.actual_q[5] * Mathf.Rad2Deg, 2));
+                    + ";" + Math.Round(moveRobot_Sub.XValue, 2)
+                    + ";" + Math.Round(moveRobot_Sub.Ikx, 2)
+                    + ";" + Math.Round(moveRobot_Sub.Iky, 2)
+                    + ";" + Math.Round(moveRobot_Sub.Ikz, 2)
+                    + ";" + Math.Round(RobotHandler.UrOutputs.actual_q[0] * Mathf.Rad2Deg, 2)
+                    + ";" + Math.Round(RobotHandler.UrOutputs.actual_q[1] * Mathf.Rad2Deg, 2)
+                    + ";" + Math.Round(RobotHandler.UrOutputs.actual_q[2] * Mathf.Rad2Deg, 2)
+                    + ";" + Math.Round(RobotHandler.UrOutputs.actual_q[3] * Mathf.Rad2Deg, 2)
+                    + ";" + Math.Round(RobotHandler.UrOutputs.actual_q[4] * Mathf.Rad2Deg, 2)
+                    + ";" + Math.Round(RobotHandler.UrOutputs.actual_q[5] * Mathf.Rad2Deg, 2));
             }
         }
     }

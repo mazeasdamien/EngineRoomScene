@@ -6,7 +6,7 @@ using UnityEngine.EventSystems;
 
 public class ButtonPressed : MonoBehaviour, IPointerDownHandler, IPointerUpHandler
 {
-    private bool isHolding = false;
+    public bool isHolding = false;
     public MoveRobot_Sub MoveRobot_Sub;
     public OutOfRqngeHelper OutOfRqngeHelper_Sub;
     public bool ispressed;
