@@ -2,6 +2,7 @@ using DDS_protocol;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class OutOfRqngeHelper : MonoBehaviour
 {
@@ -12,27 +13,34 @@ public class OutOfRqngeHelper : MonoBehaviour
 
     public MoveRobot_Sub moveRobot_Sub;
 
+    public Toggle monitor;
+
     void Update()
     {
-        if (moveRobot_Sub.ColorModee == 1 || moveRobot_Sub.ColorModee == 2)
+        if (monitor.isOn == true)
         {
-            activeAll();
-            foreach (ButtonPressed button in buttonPresseds)
+            if (moveRobot_Sub.ColorModee == 1 || moveRobot_Sub.ColorModee == 2)
             {
-                if (button.ispressed)
+                activeAll();
+                foreach (ButtonPressed button in buttonPresseds)
                 {
-                    last_pressed = button.gameObject;
-                    getOpposite();
+                    if (button.ispressed)
+                    {
+                        last_pressed = button.gameObject;
+                        getOpposite();
+                    }
                 }
             }
-        }
-        else if (moveRobot_Sub.ColorModee == 3)
-        {
-            foreach (ButtonPressed button in buttonPresseds)
+            else if (moveRobot_Sub.ColorModee == 3)
             {
-                if (button.gameObject != opposite_pressed)
+                foreach (ButtonPressed button in buttonPresseds)
                 {
-                    button.gameObject.SetActive(false);
+                    if (button.gameObject != opposite_pressed)
+                    {
+                        button.ispressed = false;
+                        button.isHolding = false;
+                        button.gameObject.SetActive(false);
+                    }
                 }
             }
         }
