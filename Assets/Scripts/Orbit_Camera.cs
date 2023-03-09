@@ -4,17 +4,26 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using static UnityEditor.ShaderGraph.Internal.KeywordDependentCollection;
 
 public class Orbit_Camera : MonoBehaviour
 {
     public Transform target;  // The object to orbit around
     [SerializeField] private Camera cam;
-    [SerializeField] private float distanceToTarget = 20;
-    [SerializeField] private float scrollSpeed = 5f;
     [SerializeField] private RawImage rawImage;
 
-    private Vector3 previousPosition;
+    public float distance = 10.0f; // the initial distance between the camera and target
+    public float xSpeed = 120.0f; // the horizontal speed of the orbit
+    public float ySpeed = 120.0f; // the vertical speed of the orbit
+    public float yMinLimit = -20f; // the minimum vertical angle of the orbit
+    public float yMaxLimit = 80f; // the maximum vertical angle of the orbit
+    public float distanceMin = 0.5f; // the minimum distance between the camera and target
+    public float distanceMax = 40f; // the maximum distance between the camera and target
 
+    private float x = 0.0f;
+    private float y = 0.0f;
+    private bool isRotating = false;
+    private Vector3 lastMousePosition;
 
     public Camera targetCamera3;
     public RenderTexture renderTexture3;
@@ -37,6 +46,16 @@ public class Orbit_Camera : MonoBehaviour
         renderTexture3 = new RenderTexture(1280, 720, 24);
         targetCamera3.targetTexture = renderTexture3;
         texture3 = new Texture2D(renderTexture3.width, renderTexture3.height);
+
+        Vector3 angles = transform.eulerAngles;
+        x = angles.y;
+        y = angles.x;
+
+        // Make the rigid body not change rotation
+        if (GetComponent<Rigidbody>())
+        {
+            GetComponent<Rigidbody>().freezeRotation = true;
+        }
     }
 
     private void Update()
@@ -47,33 +66,58 @@ public class Orbit_Camera : MonoBehaviour
         imageCam3.texture = texture3;
         texture3.Apply();
 
+
+
         if (isEnter == true)
         {
-            float scrollAmount = Input.GetAxis("Mouse ScrollWheel") * scrollSpeed;
-            distanceToTarget -= scrollAmount;
-            distanceToTarget = Mathf.Max(0, distanceToTarget);
-
-            if (Input.GetMouseButtonDown(0))
+            if (target)
             {
-                previousPosition = cam.ScreenToViewportPoint(Input.mousePosition);
-            }
-            else if (Input.GetMouseButton(0))
-            {
-                Vector3 newPosition = cam.ScreenToViewportPoint(Input.mousePosition);
-                Vector3 direction = previousPosition - newPosition;
+                if (Input.GetMouseButtonDown(0))
+                {
+                    isRotating = true;
+                    lastMousePosition = Input.mousePosition;
+                }
+                else if (Input.GetMouseButtonUp(0))
+                {
+                    isRotating = false;
+                }
 
-                float rotationAroundYAxis = -direction.x * 180; // camera moves horizontally
-                float rotationAroundXAxis = direction.y * 180; // camera moves vertically
+                if (isRotating)
+                {
+                    float mouseX = Input.mousePosition.x - lastMousePosition.x;
+                    float mouseY = Input.mousePosition.y - lastMousePosition.y;
 
-                cam.transform.position = target.position;
+                    x += mouseX * xSpeed * distance * 0.02f;
+                    y -= mouseY * ySpeed * 0.02f;
 
-                cam.transform.Rotate(new Vector3(1, 0, 0), rotationAroundXAxis);
-                cam.transform.Rotate(new Vector3(0, 1, 0), rotationAroundYAxis, Space.World); // <— This is what makes it work!
+                    y = ClampAngle(y, yMinLimit, yMaxLimit);
 
-                cam.transform.Translate(new Vector3(0, 0, -distanceToTarget));
+                    lastMousePosition = Input.mousePosition;
+                }
 
-                previousPosition = newPosition;
+                distance = Mathf.Clamp(distance - Input.GetAxis("Mouse ScrollWheel") * 5, distanceMin, distanceMax);
+
+                Quaternion rotation = Quaternion.Euler(y, x, 0);
+                Vector3 position = rotation * new Vector3(0.0f, 0.0f, -distance) + target.position;
+
+                transform.rotation = rotation;
+                transform.position = position;
             }
         }
+    }
+
+    public static float ClampAngle(float angle, float min, float max)
+    {
+        if (angle < -360f)
+        {
+            angle += 360f;
+        }
+
+        if (angle > 360f)
+        {
+            angle -= 360f;
+        }
+
+        return Mathf.Clamp(angle, min, max);
     }
 }

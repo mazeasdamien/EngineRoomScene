@@ -57,6 +57,7 @@ namespace DDS_protocol
                 // start of part
                 using (StreamWriter writer = new StreamWriter(filePath, true))
                 {
+                    writer.WriteLine("collisions count before start" + moveRobot_Sub.collisionNumbers);
                     writer.WriteLine("part1");
                 }
 
