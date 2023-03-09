@@ -13,8 +13,6 @@ namespace DDS_protocol
         public MoveRobot_Sub moveRobot_Sub;
         public GameObject popup;
         public TMP_InputField id;
-        public Toggle VR;
-        public Toggle MONITOR;
         private float time = 0f;
         private bool isRunning;
         public string folderPath;
