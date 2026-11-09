@@ -20,17 +20,6 @@ using static ScenarioManager;
 //   report {label}   photo   reset_report
 public class AgentServer : AgentLink
 {
-    // Inspection targets in this scene's coordinates (same values as GtCapture / ground truth).
-    static readonly Vector3[] MonitorTargets =
-    {
-        new Vector3(395.397f, 2.411f, 0.338f), new Vector3(396.031f, 2.440f, 0.340f),
-        new Vector3(395.767f, 2.407f, 0.334f), new Vector3(396.483f, 2.426f, 0.398f)
-    };
-    static readonly Vector3[] VrTargets =
-    {
-        new Vector3(395.341f, 2.321f, 0.436f), new Vector3(395.142f, 2.428f, 0.462f),
-        new Vector3(396.560f, 2.433f, 0.331f), new Vector3(394.920f, 2.401f, 0.299f)
-    };
     static readonly float[] RequiredCm = { 15, 10, 14, 15 };
 
     ScenarioManager sm;
@@ -103,6 +92,26 @@ public class AgentServer : AgentLink
             case "camera":
                 yield return RenderCamera(cameraCopy.targetCamera, req.w > 0 ? req.w : 1280, req.h > 0 ? req.h : 720, reply);
                 break;
+            case "eye":
+                {
+                    // free camera for figures: same HDRP settings as the inspection camera, wide lens
+                    var go = new GameObject("AgentEyeERS");
+                    var cam = go.AddComponent<Camera>();
+                    var study = cameraCopy.targetCamera;
+                    cam.CopyFrom(study);
+                    var src = study.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalCameraData>();
+                    var dst = go.GetComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalCameraData>() ?? go.AddComponent<UnityEngine.Rendering.HighDefinition.HDAdditionalCameraData>();
+                    if (src != null) src.CopyTo(dst);
+                    cam.fieldOfView = req.n > 0 ? req.n : 50f;
+                    cam.nearClipPlane = 0.02f;
+                    cam.farClipPlane = 200f;
+                    cam.enabled = false;
+                    go.transform.position = new Vector3(req.x, req.y, req.z);
+                    go.transform.LookAt(new Vector3(req.lx, req.ly, req.lz));
+                    yield return RenderCamera(cam, req.w > 0 ? req.w : 1920, req.h > 0 ? req.h : 1080, reply, settleFrames: 12);
+                    Destroy(go);
+                    break;
+                }
             case "condition":
                 SetCondition(req.value);
                 yield return null;
@@ -191,15 +200,27 @@ public class AgentServer : AgentLink
         var g = new Dictionary<string, object>();
         if (Step < 1 || cameraCopy == null || cameraCopy.targetCamera == null) return g;
         var cam = cameraCopy.targetCamera.transform;
-        Vector3 p = (IsVr ? VrTargets : MonitorTargets)[Step - 1];
+        Vector3 p = GtTargets.Target(sm, IsVr, Step);
         Vector3 d = p - cam.position;
         g["gt_target_distance_cm"] = Math.Round(d.magnitude * 100f, 1);
         g["gt_off_axis_deg"] = Math.Round(Vector3.Angle(cam.forward, d), 1);
         Vector3 vp = cameraCopy.targetCamera.WorldToViewportPoint(p);
         g["gt_target_in_view"] = vp.z > 0 && vp.x >= 0 && vp.x <= 1 && vp.y >= 0 && vp.y <= 1;
         g["gt_target_viewport"] = new[] { Math.Round(vp.x, 3), Math.Round(vp.y, 3) };
+        var defect = GtTargets.Defect(sm, IsVr, Step);
+        if (defect != null && GtFigure.TryWorldBounds(defect, out var db))
+        {
+            Vector3 dv = cameraCopy.targetCamera.WorldToViewportPoint(db.center);
+            g["gt_zone"] = defect.name;
+            g["gt_zone_viewport"] = new[] { Math.Round(dv.x, 3), Math.Round(dv.y, 3) };
+            g["gt_zone_in_view"] = dv.z > 0 && dv.x >= 0 && dv.x <= 1 && dv.y >= 0 && dv.y <= 1;
+            g["gt_zone_distance_cm"] = Math.Round(Vector3.Distance(cam.position, db.center) * 100f, 1);
+        }
+        else g["gt_zone"] = "target_point";
         g["camera_position"] = V3(cam.position);
         g["camera_forward"] = V3(cam.forward);
+        g["camera_right"] = V3(cam.right);
+        g["camera_up"] = V3(cam.up);
         return g;
     }
 
