@@ -52,11 +52,17 @@ public class ScenarioManager : MonoBehaviour
     }
 
     public scenarios scenario; 
+
+    // 2026 (agent study): -scenario 1|2 sets the defect scenario independently of the interface;
+    // 0 keeps the 2023 rule (scenario 1 with the monitor, scenario 2 in VR).
+    public static int ScenarioOverride = 0;
     public scenario1_parts parts;
 
     private void Update()
     {
-        if (VR.isOn)
+        if (ScenarioOverride == 1) scenario = scenarios.scenario1;
+        else if (ScenarioOverride == 2) scenario = scenarios.scenario2;
+        else if (VR.isOn)
         {
             scenario = scenarios.scenario2;
         }

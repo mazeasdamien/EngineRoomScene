@@ -10,7 +10,7 @@ using UnityEngine.UI;
 using static ScenarioManager;
 
 // 2026: agent-study server of the 2D interface / camera instance. Started only when the player is
-// launched with  -agentport <port>  (default none) and/or  -condition monitor|vr.
+// launched with  -agentport <port>  (default none) and/or  -condition monitor|vr, and optionally  -scenario 1|2  (defects and inspected parts; default: follows the condition, as in 2023).
 // It replaces the 2023 experimenter flow (green start panel, participant id, Participants_data
 // folder, Application.Quit after step 4); the interface itself (panels, buttons) is unchanged.
 //
@@ -53,6 +53,16 @@ public class AgentServer : AgentLink
         yield return null;
         string condition = ArgString("-condition", "");
         if (condition != "") { SetCondition(condition); StartRun(); }
+        int scen = ArgInt("-scenario", 0);
+        if (scen != 0) SetScenario(scen);
+    }
+
+    // 2026: defect scenario independent of the interface (1 or 2; 0 = 2023 rule, follows the condition).
+    void SetScenario(int n)
+    {
+        if (n != 1 && n != 2) throw new ArgumentException("scenario must be 1 or 2");
+        ScenarioManager.ScenarioOverride = n;
+        GtTargets.PlaceGreenParts(sm, n == 2);
     }
 
     void SetCondition(string value)
@@ -73,6 +83,7 @@ public class AgentServer : AgentLink
     }
 
     bool IsVr => sm.VR.isOn;
+    bool Scenario2 => ScenarioManager.ScenarioOverride == 2 || (ScenarioManager.ScenarioOverride == 0 && IsVr);
     int Step => (int)sm.parts; // 0 = start, 1..4
 
     protected override IEnumerator Handle(AgentRequest req, Reply reply)
@@ -168,7 +179,7 @@ public class AgentServer : AgentLink
             ["time"] = DateTime.UtcNow.ToString("o")
         };
         Directory.CreateDirectory(outDir);
-        string file = Path.Combine(outDir, $"{DateTime.Now:yyyyMMdd_HHmmss_fff}_{(IsVr ? "vr" : "monitor")}_p{Step}_{label.Replace(' ', '_')}.png");
+        string file = Path.Combine(outDir, $"{DateTime.Now:yyyyMMdd_HHmmss_fff}_{(IsVr ? "vr" : "monitor")}_s{(Scenario2 ? 2 : 1)}_p{Step}_{label.Replace(' ', '_')}.png");
         File.WriteAllBytes(file, Convert.FromBase64String((string)reply["image"]));
         rec["file"] = file;
         photos.Add(rec);
@@ -179,6 +190,7 @@ public class AgentServer : AgentLink
     void FillState(Reply r)
     {
         r["condition"] = IsVr ? "vr" : "monitor";
+        r["scenario"] = Scenario2 ? 2 : 1;
         r["step"] = Step;
         r["required_cm"] = Step >= 1 ? RequiredCm[Step - 1] : 0f;
         r["displayed_distance"] = DisplayedDistance();
@@ -200,14 +212,14 @@ public class AgentServer : AgentLink
         var g = new Dictionary<string, object>();
         if (Step < 1 || cameraCopy == null || cameraCopy.targetCamera == null) return g;
         var cam = cameraCopy.targetCamera.transform;
-        Vector3 p = GtTargets.Target(sm, IsVr, Step);
+        Vector3 p = GtTargets.Target(sm, Scenario2, Step);
         Vector3 d = p - cam.position;
         g["gt_target_distance_cm"] = Math.Round(d.magnitude * 100f, 1);
         g["gt_off_axis_deg"] = Math.Round(Vector3.Angle(cam.forward, d), 1);
         Vector3 vp = cameraCopy.targetCamera.WorldToViewportPoint(p);
         g["gt_target_in_view"] = vp.z > 0 && vp.x >= 0 && vp.x <= 1 && vp.y >= 0 && vp.y <= 1;
         g["gt_target_viewport"] = new[] { Math.Round(vp.x, 3), Math.Round(vp.y, 3) };
-        var defect = GtTargets.Defect(sm, IsVr, Step);
+        var defect = GtTargets.Defect(sm, Scenario2, Step);
         if (defect != null && GtFigure.TryWorldBounds(defect, out var db))
         {
             Vector3 dv = cameraCopy.targetCamera.WorldToViewportPoint(db.center);

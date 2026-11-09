@@ -27,19 +27,43 @@ public static class GtTargets
         return environment;
     }
 
-    public static Vector3 Target(ScenarioManager sm, bool vr, int step /* 1..4 */)
+    static Vector3[] s1Local;   // original local positions of s1p1..s1p4 (scenario 1)
+
+    static GameObject Part(ScenarioManager sm, int step) =>
+        step == 1 ? sm.s1p1 : step == 2 ? sm.s1p2 : step == 3 ? sm.s1p3 : sm.s1p4;
+
+    static void CacheScenario1(ScenarioManager sm)
     {
-        var env = Environment(sm);
-        if (vr) return env.TransformPoint(VrInTwin[step - 1]);
-        var part = step == 1 ? sm.s1p1 : step == 2 ? sm.s1p2 : step == 3 ? sm.s1p3 : sm.s1p4;
-        return env.TransformPoint(part.transform.localPosition);
+        if (s1Local != null) return;
+        s1Local = new Vector3[4];
+        for (int i = 0; i < 4; i++) s1Local[i] = Part(sm, i + 1).transform.localPosition;
     }
 
-    // Defect object of a ground-truth cell (null for "No default" and VR step 4, whose missing
-    // part does not exist in this scene).
-    public static GameObject Defect(ScenarioManager sm, bool vr, int step)
+    // "scenario2" = defects and inspected parts of scenario 2 (the 2023 VR scenario).
+    public static Vector3 Target(ScenarioManager sm, bool scenario2, int step /* 1..4 */)
     {
-        if (!vr) return step == 1 ? sm.Rust1 : step == 2 ? sm.BrokenPipes : step == 4 ? sm.MissingPartScenario1 : null;
+        var env = Environment(sm);
+        if (scenario2) return env.TransformPoint(VrInTwin[step - 1]);
+        CacheScenario1(sm);
+        return env.TransformPoint(s1Local[step - 1]);
+    }
+
+    // 2026 (agent study, scenario crossed with the interface): the green parts of the 2D
+    // interface (miniature) move to the parts of the chosen scenario. Their local positions are
+    // environment coordinates, so scenario 2 uses the twin positions directly. The part shapes stay
+    // those of scenario 1; only their positions change.
+    public static void PlaceGreenParts(ScenarioManager sm, bool scenario2)
+    {
+        CacheScenario1(sm);
+        for (int i = 0; i < 4; i++)
+            Part(sm, i + 1).transform.localPosition = scenario2 ? VrInTwin[i] : s1Local[i];
+    }
+
+    // Defect object of a ground-truth cell (null for "No default" and scenario-2 step 4, whose
+    // missing part does not exist in this scene).
+    public static GameObject Defect(ScenarioManager sm, bool scenario2, int step)
+    {
+        if (!scenario2) return step == 1 ? sm.Rust1 : step == 2 ? sm.BrokenPipes : step == 4 ? sm.MissingPartScenario1 : null;
         return step == 1 ? sm.Rust2 : step == 3 ? sm.BrokenPart2 : null;
     }
 }
