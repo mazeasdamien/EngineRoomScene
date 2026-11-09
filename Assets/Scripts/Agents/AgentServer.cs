@@ -18,6 +18,9 @@ using static ScenarioManager;
 //   ping | state | screenshot | camera {w,h}
 //   condition {value: "monitor"|"vr"}   start   step {n: 0..4}
 //   report {label}   photo   reset_report
+// 2026-11 (harness v2, players kept open between runs):
+//   scenario {n: 1|2}   trial {n: 1|0} (2023 training scene)   outdir {value} (photo folder of the run)
+//   snap_robot          simulated UR16e jumps to its current set-point (after a reset of the twin)
 public class AgentServer : AgentLink
 {
     static readonly float[] RequiredCm = { 15, 10, 14, 15 };
@@ -158,6 +161,30 @@ public class AgentServer : AgentLink
             case "photo":
                 yield return TakePhoto(reply);
                 break;
+            case "scenario":
+                SetScenario(req.n);
+                yield return null;
+                FillState(reply);
+                break;
+            case "trial":
+                if (trialSwitch == null || trialSwitch.trialToggle == null) { reply.Fail("no training-scene toggle"); break; }
+                trialSwitch.trialToggle.isOn = req.n == 1;
+                yield return null;   // trial.Update swaps the engine and the training model
+                yield return null;
+                FillState(reply);
+                break;
+            case "outdir":
+                if (string.IsNullOrWhiteSpace(req.value)) { reply.Fail("value: folder path"); break; }
+                outDir = req.value;
+                reply["outdir"] = outDir;
+                break;
+            case "snap_robot":
+                if (SimRobot.Instance == null) { reply.Fail("no simulated robot (-realrobot)"); break; }
+                SimRobot.Instance.Snap();
+                yield return null;
+                yield return null;
+                FillState(reply);
+                break;
             default:
                 reply.Fail($"unknown command '{req.cmd}'");
                 break;
@@ -191,6 +218,7 @@ public class AgentServer : AgentLink
     {
         r["condition"] = IsVr ? "vr" : "monitor";
         r["scenario"] = Scenario2 ? 2 : 1;
+        r["trial"] = trialSwitch != null && trialSwitch.trialToggle != null && trialSwitch.trialToggle.isOn;
         r["step"] = Step;
         r["required_cm"] = Step >= 1 ? RequiredCm[Step - 1] : 0f;
         r["displayed_distance"] = DisplayedDistance();
@@ -210,8 +238,14 @@ public class AgentServer : AgentLink
     Dictionary<string, object> Geometry()
     {
         var g = new Dictionary<string, object>();
-        if (Step < 1 || cameraCopy == null || cameraCopy.targetCamera == null) return g;
+        if (cameraCopy == null || cameraCopy.targetCamera == null) return g;
         var cam = cameraCopy.targetCamera.transform;
+        // camera axes are needed at step 0 too (practice phase, direct control relative to the image)
+        g["camera_position"] = V3(cam.position);
+        g["camera_forward"] = V3(cam.forward);
+        g["camera_right"] = V3(cam.right);
+        g["camera_up"] = V3(cam.up);
+        if (Step < 1) return g;
         Vector3 p = GtTargets.Target(sm, Scenario2, Step);
         Vector3 d = p - cam.position;
         g["gt_target_distance_cm"] = Math.Round(d.magnitude * 100f, 1);
@@ -229,10 +263,6 @@ public class AgentServer : AgentLink
             g["gt_zone_distance_cm"] = Math.Round(Vector3.Distance(cam.position, db.center) * 100f, 1);
         }
         else g["gt_zone"] = "target_point";
-        g["camera_position"] = V3(cam.position);
-        g["camera_forward"] = V3(cam.forward);
-        g["camera_right"] = V3(cam.right);
-        g["camera_up"] = V3(cam.up);
         return g;
     }
 

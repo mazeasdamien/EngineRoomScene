@@ -68,6 +68,22 @@ public class SimRobot : MonoBehaviour
         Debug.Log($"SimRobot: {hidden} housing renderer(s) hidden from the inspection camera");
     }
 
+    // 2026-11 (players kept open between runs): jump to the current set-point instead of travelling
+    // back at the joint speed limit, so that a new run starts exactly where a fresh player starts.
+    public void Snap()
+    {
+        var inp = RobotHandler.UrInputs;
+        double[] target =
+        {
+            inp.input_double_register_20, inp.input_double_register_21, inp.input_double_register_22,
+            inp.input_double_register_23, inp.input_double_register_24, inp.input_double_register_25
+        };
+        var q = RobotHandler.UrOutputs.actual_q;
+        for (int i = 0; i < 6; i++) if (!double.IsNaN(target[i])) q[i] = target[i];
+        MaxError = 0;
+        Settled = true;
+    }
+
     void Update()
     {
         var inp = RobotHandler.UrInputs;
