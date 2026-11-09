@@ -178,6 +178,18 @@ public class AgentServer : AgentLink
                 outDir = req.value;
                 reply["outdir"] = outDir;
                 break;
+            case "trial_target":
+                // known-target diagnostic: the training-scene marker, in the twin's world frame (= this
+                // scene's "environment" frame), as reported by ur_Grenoble
+                {
+                    var env = GtTargets.Environment(sm);
+                    if (env == null) { reply.Fail("no environment frame"); break; }
+                    trialTarget = env.TransformPoint(new Vector3(req.x, req.y, req.z));
+                    trialTargetName = "twin training marker";
+                    yield return null;
+                    FillState(reply);
+                    break;
+                }
             case "snap_robot":
                 if (SimRobot.Instance == null) { reply.Fail("no simulated robot (-realrobot)"); break; }
                 SimRobot.Instance.Snap();
@@ -245,7 +257,21 @@ public class AgentServer : AgentLink
         g["camera_forward"] = V3(cam.forward);
         g["camera_right"] = V3(cam.right);
         g["camera_up"] = V3(cam.up);
-        if (Step < 1) return g;
+        if (Step < 1)
+        {
+            // 2026-11 known-target diagnostic: in the training scene, the same geometry for its green marker
+            if (TrialOn && TrialTarget(out Vector3 tp, out string tname))
+            {
+                Vector3 td = tp - cam.position;
+                g["gt_trial_target"] = tname;
+                g["gt_target_distance_cm"] = Math.Round(td.magnitude * 100f, 1);
+                g["gt_off_axis_deg"] = Math.Round(Vector3.Angle(cam.forward, td), 1);
+                Vector3 tv = cameraCopy.targetCamera.WorldToViewportPoint(tp);
+                g["gt_target_in_view"] = tv.z > 0 && tv.x >= 0 && tv.x <= 1 && tv.y >= 0 && tv.y <= 1;
+                g["gt_target_viewport"] = new[] { Math.Round(tv.x, 3), Math.Round(tv.y, 3) };
+            }
+            return g;
+        }
         Vector3 p = GtTargets.Target(sm, Scenario2, Step);
         Vector3 d = p - cam.position;
         g["gt_target_distance_cm"] = Math.Round(d.magnitude * 100f, 1);
@@ -264,6 +290,20 @@ public class AgentServer : AgentLink
         }
         else g["gt_zone"] = "target_point";
         return g;
+    }
+
+    bool TrialOn => trialSwitch != null && trialSwitch.trialToggle != null && trialSwitch.trialToggle.isOn;
+
+    // Green marker of the 2023 training scene, for the known-target diagnostic. This camera scene has
+    // no life-size marker (its only green object is in the top-view miniature, 4.4 km away), so the
+    // point is the twin's marker, sent by the harness with the trial_target command.
+    Vector3? trialTarget;
+    string trialTargetName;
+    bool TrialTarget(out Vector3 p, out string name)
+    {
+        p = trialTarget ?? default;
+        name = trialTargetName;
+        return trialTarget.HasValue;
     }
 
     string DisplayedDistance() => track != null && track.textMeshPro != null ? track.textMeshPro.text : "";
